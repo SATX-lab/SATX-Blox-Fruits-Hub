@@ -1650,9 +1650,9 @@ Notify("SATX Hub", "Script Loaded Successfully! Version " .. SATX.Version, 5)
 
 print([[
 ╔══════════════════════════════════════════════════╗
-║        SATX BLOX FRUITS HUB - LOADED            ║
+║        SATX BLOX FRUITS HUB - LOADED             ║
 ║        Version: 3.0 ULTIMATE                     ║
-║        Status: ✅ Fully Operational              ║
+║        Status: ✅ Fully Operational             ║
 ║        Features: 100+ Advanced Functions         ║
 ╚══════════════════════════════════════════════════╝
 ]])
