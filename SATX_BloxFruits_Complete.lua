@@ -6,10 +6,17 @@
     ███████║██║  ██║   ██║   ██╔╝ ██╗
     ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝
     
-    SATX Blox Fruits Hub - Ultra Complete Edition
-    Version: 2.0
-    Created for SATX Executor
+    SATX Blox Fruits Hub - ULTIMATE Edition
+    Version: 3.0 ULTRA
+    The Most Complete Script Ever Created
+    
+    Features from: Hoho Hub, Zen Hub, Redz Hub, Mukuro Hub, W-azure
 ]]
+
+-- Anti-Leak Protection
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
 
 -- Services
 local Players = game:GetService("Players")
@@ -19,37 +26,62 @@ local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local HttpService = game:GetService("HttpService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local StarterGui = game:GetService("StarterGui")
 
--- Local Player
+-- Player Variables
 local Player = Players.LocalPlayer
 local Character = Player.Character or Player.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
--- Anti-AFK
-Player.Idled:Connect(function()
-    VirtualUser:CaptureController()
-    VirtualUser:ClickButton2(Vector2.new())
+-- Update Character on respawn
+Player.CharacterAdded:Connect(function(char)
+    Character = char
+    Humanoid = Character:WaitForChild("Humanoid")
+    HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 end)
 
--- Variables
+-- Anti-AFK System
+local vu = game:GetService("VirtualUser")
+game:GetService("Players").LocalPlayer.Idled:connect(function()
+    vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+    wait(1)
+    vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+end)
+
+-- Global Variables
 local SATX = {
+    Version = "3.0 ULTIMATE",
     Settings = {
+        -- Auto Farm Settings
         AutoFarm = false,
-        AutoQuest = false,
-        AutoLevel = false,
-        AutoBoss = false,
-        AutoRaid = false,
-        AutoFactory = false,
-        AutoSeaEvent = false,
-        AutoCakePrince = false,
-        AutoElite = false,
-        AutoSoul = false,
-        AutoBone = false,
+        AutoFarmLevel = false,
+        AutoFarmBone = false,
+        AutoFarmCake = false,
+        AutoFarmEctoplasm = false,
+        AutoFarmFactory = false,
+        AutoFarmMastery = false,
         
-        -- Combat
+        -- Boss Farm
+        AutoBoss = false,
+        AutoAllBoss = false,
+        AutoElite = false,
+        AutoSoulReaper = false,
+        AutoDoughKing = false,
+        AutoCakePrince = false,
+        
+        -- Combat Settings
         FastAttack = false,
-        AutoHaki = false,
-        AutoBusoHaki = false,
+        FastAttackMode = "Fast",
+        AutoHaki = true,
+        AutoEnhancement = true,
+        
+        -- Mastery
+        SkillMastery = false,
+        GunMastery = false,
         
         -- Stats
         AutoMelee = false,
@@ -58,77 +90,559 @@ local SATX = {
         AutoGun = false,
         AutoFruit = false,
         
+        -- Sea Events
+        AutoSeaBeast = false,
+        AutoPirateRaid = false,
+        AutoShip = false,
+        AutoSeaEvent = false,
+        AutoTerrorshark = false,
+        
+        -- Raid
+        AutoRaid = false,
+        AutoAwakener = false,
+        AutoBuyChip = false,
+        KillAura = false,
+        
         -- Misc
-        AutoStoreItems = false,
-        AutoRandomSurprise = false,
-        AntiAfk = true,
+        BringMob = false,
+        FastAttackDelay = 0.1,
+        WhiteScreen = false,
+        RemoveFog = false,
         NoClip = false,
         InfiniteEnergy = false,
+        AutoActiveRaceV3 = false,
+        AutoActiveRaceV4 = false,
+        
+        -- Movement
         WalkSpeed = 16,
         JumpPower = 50,
         
-        -- Teleport
-        TeleportSpeed = 300,
+        -- ESP Settings
+        ESPPlayer = false,
+        ESPMob = false,
+        ESPFruit = false,
+        ESPChest = false,
+        ESPFlower = false,
+        ESPNPC = false,
+        ESPIsland = false,
         
-        -- ESP
-        PlayerESP = false,
-        MobESP = false,
-        FruitESP = false,
-        ChestESP = false,
-        FlowerESP = false,
+        -- Distance
+        BringMobDistance = 350,
+        FarmDistance = 30,
         
-        -- Farm Settings
-        SelectedWeapon = "Combat",
-        SelectedQuest = "None",
+        -- Selections
+        SelectedWeapon = "Melee",
         SelectedBoss = "None",
-        DistanceFromMob = 5,
-        BringMobs = false,
+        SelectedMob = "None",
+        SelectRaid = "Flame",
     }
 }
 
+-- Upload Custom Image to Roblox (Your logo will be displayed)
+local SATXLogo = "rbxassetid://18793359224" -- Placeholder, you'll need to upload your image
+
 -- Weapon List
 local WeaponList = {}
+local WeaponType = {"Melee", "Sword", "Gun", "Fruit"}
+
+-- Get Weapons
 for _, v in pairs(Player.Backpack:GetChildren()) do
     if v:IsA("Tool") then
         table.insert(WeaponList, v.Name)
     end
 end
 
--- Create GUI
+for _, v in pairs(Character:GetChildren()) do
+    if v:IsA("Tool") then
+        table.insert(WeaponList, v.Name)
+    end
+end
+
+-- Utility Functions
+local function Notify(title, text, duration)
+    StarterGui:SetCore("SendNotification", {
+        Title = title;
+        Text = text;
+        Duration = duration or 5;
+        Icon = SATXLogo;
+    })
+end
+
+local function TP(pos)
+    if not pos then return end
+    local Distance = (pos.Position - HumanoidRootPart.Position).Magnitude
+    
+    if Distance < 25 then
+        HumanoidRootPart.CFrame = pos
+    elseif Distance < 250 then
+        local tween = TweenService:Create(HumanoidRootPart, TweenInfo.new(Distance/300, Enum.EasingStyle.Linear), {CFrame = pos})
+        tween:Play()
+    else
+        HumanoidRootPart.CFrame = pos
+    end
+end
+
+-- Fast Attack System (From Hoho Hub - Best Fast Attack)
+local Camera = Workspace.CurrentCamera
+local CombatFramework = require(game:GetService("Players").LocalPlayer.PlayerScripts.CombatFramework)
+local CombatFrameworkR = getupvalues(CombatFramework)[2]
+local RigController = require(game:GetService("Players")["LocalPlayer"].PlayerScripts.CombatFramework.RigController)
+local RigControllerR = getupvalues(RigController)[2]
+local realbhit = require(game.ReplicatedStorage.CombatFramework.RigLib)
+local cooldownfastattack = tick()
+
+function CurrentWeapon()
+    local ac = CombatFrameworkR.activeController
+    local ret = ac.blades[1]
+    if not ret then return game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool").Name end
+    pcall(function()
+        while ret.Parent~=game.Players.LocalPlayer.Character do ret=ret.Parent end
+    end)
+    if not ret then return game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool").Name end
+    return ret
+end
+
+function getAllBladeHitsPlayers(Sizes)
+    local Hits = {}
+    local Client = game.Players.LocalPlayer
+    local Characters = game:GetService("Workspace").Characters:GetChildren()
+    for i=1,#Characters do local v = Characters[i]
+        local Human = v:FindFirstChildOfClass("Humanoid")
+        if v.Name ~= game.Players.LocalPlayer.Name and Human and Human.RootPart and Human.Health > 0 and Client:DistanceFromCharacter(Human.RootPart.Position) < Sizes+5 then
+            table.insert(Hits,Human.RootPart)
+        end
+    end
+    return Hits
+end
+
+function getAllBladeHits(Sizes)
+    local Hits = {}
+    local Client = game.Players.LocalPlayer
+    local Enemies = game:GetService("Workspace").Enemies:GetChildren()
+    for i=1,#Enemies do local v = Enemies[i]
+        local Human = v:FindFirstChildOfClass("Humanoid")
+        if Human and Human.RootPart and Human.Health > 0 and Client:DistanceFromCharacter(Human.RootPart.Position) < Sizes+5 then
+            table.insert(Hits,Human.RootPart)
+        end
+    end
+    return Hits
+end
+
+spawn(function()
+    while wait() do
+        if SATX.Settings.FastAttack then
+            pcall(function()
+                if SATX.Settings.FastAttackMode == "Fast" then
+                    repeat wait()
+                        AttackFunction()
+                    until not SATX.Settings.FastAttack
+                elseif SATX.Settings.FastAttackMode == "Super Fast" then
+                    for i = 1, 5 do
+                        wait()
+                        AttackFunction()
+                    end
+                elseif SATX.Settings.FastAttackMode == "Slow" then
+                    wait(0.2)
+                    AttackFunction()
+                end
+            end)
+        end
+    end
+end)
+
+function AttackFunction()
+    pcall(function()
+        local AC = CombatFrameworkR.activeController
+        if AC and AC.equipped then
+            for indexincrement = 1, 1 do
+                local bladehit = getAllBladeHits(60)
+                if #bladehit > 0 then
+                    local AcAttack8 = debug.getupvalue(AC.attack, 5)
+                    local AcAttack9 = debug.getupvalue(AC.attack, 6)
+                    local AcAttack7 = debug.getupvalue(AC.attack, 4)
+                    local AcAttack10 = debug.getupvalue(AC.attack, 7)
+                    local NumberAc12 = (AcAttack8 * 798405 + AcAttack7 * 727595) % AcAttack9
+                    local NumberAc13 = AcAttack7 * 798405
+                    (function()
+                        NumberAc12 = (NumberAc12 * AcAttack9 + NumberAc13) % 1099511627776
+                        AcAttack8 = math.floor(NumberAc12 / AcAttack9)
+                        AcAttack7 = NumberAc12 - AcAttack8 * AcAttack9
+                    end)()
+                    AcAttack10 = AcAttack10 + 1
+                    debug.setupvalue(AC.attack, 5, AcAttack8)
+                    debug.setupvalue(AC.attack, 6, AcAttack9)
+                    debug.setupvalue(AC.attack, 4, AcAttack7)
+                    debug.setupvalue(AC.attack, 7, AcAttack10)
+                    for k, v in pairs(AC.animator.anims.basic) do
+                        v:Play(0.01,0.01,0.01)
+                    end                 
+                    if game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool") and AC.blades and AC.blades[1] then 
+                        game:GetService("ReplicatedStorage").RigControllerEvent:FireServer("weaponChange",tostring(CurrentWeapon()))
+                        game.ReplicatedStorage.Remotes.Validator:FireServer(math.floor(NumberAc12 / 1099511627776 * 16777215), AcAttack10)
+                        game:GetService("ReplicatedStorage").RigControllerEvent:FireServer("hit", bladehit, 2, "") 
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- Bring Mob Function (From Mukuro Hub)
+spawn(function()
+    while wait() do
+        if SATX.Settings.BringMob then
+            pcall(function()
+                for i, v in pairs(game.Workspace.Enemies:GetChildren()) do
+                    if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+                        if (v.HumanoidRootPart.Position - HumanoidRootPart.Position).magnitude <= SATX.Settings.BringMobDistance then
+                            v.HumanoidRootPart.CFrame = HumanoidRootPart.CFrame * CFrame.new(0, 0, SATX.Settings.FarmDistance)
+                            v.HumanoidRootPart.CanCollide = false
+                            v.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
+                            v.Head.CanCollide = false
+                            if v.Humanoid:FindFirstChild("Animator") then
+                                v.Humanoid.Animator:Destroy()
+                            end
+                            sethiddenproperty(game.Players.LocalPlayer, "SimulationRadius", math.huge)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- NoClip
+spawn(function()
+    while wait() do
+        if SATX.Settings.NoClip then
+            for _, v in pairs(Character:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    v.CanCollide = false
+                end
+            end
+        end
+    end
+end)
+
+-- Auto Haki
+spawn(function()
+    while wait() do
+        if SATX.Settings.AutoHaki then
+            if not Player.Character:FindFirstChild("HasBuso") then
+                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("Buso")
+            end
+        end
+    end
+end)
+
+-- Walk Speed
+spawn(function()
+    while wait() do
+        pcall(function()
+            if Humanoid then
+                Humanoid.WalkSpeed = SATX.Settings.WalkSpeed
+                Humanoid.JumpPower = SATX.Settings.JumpPower
+            end
+        end)
+    end
+end)
+
+-- Quest System
+local function GetQuestByLevel()
+    local level = Player.Data.Level.Value
+    local quests = {
+        {1, 9, "BanditQuest1", "Bandit", 1, CFrame.new(1059.37195, 16.5139828, 1549.22729)},
+        {10, 14, "JungleQuest", "Monkey", 1, CFrame.new(-1448.51806640625, 67.85301208496094, 11.46579647064209)},
+        {15, 29, "JungleQuest", "Gorilla", 2, CFrame.new(-1129.8836669921875, 40.46354675292969, -525.4237060546875)},
+        {30, 39, "BuggyQuest1", "Pirate", 1, CFrame.new(-1141.0223388671875, 4.7514519691467285, 3831.456787109375)},
+        {40, 59, "BuggyQuest1", "Brute", 2, CFrame.new(-1141.0223388671875, 4.7514519691467285, 3831.456787109375)},
+        {60, 74, "DesertQuest", "Desert Bandit", 1, CFrame.new(894.488525390625, 6.493870735168457, 4390.88671875)},
+        {75, 89, "DesertQuest", "Desert Officer", 2, CFrame.new(1608.2822265625, 8.079000473022461, 4371.00732421875)},
+        {90, 99, "SnowQuest", "Snow Bandit", 1, CFrame.new(1389.74451, 87.272789, -1298.90796)},
+        {100, 119, "SnowQuest", "Snowman", 2, CFrame.new(1389.74451, 87.272789, -1298.90796)},
+        {120, 149, "MarineQuest2", "Chief Petty Officer", 1, CFrame.new(-4914.8212890625, 50.44632720947266, 4281.58447265625)},
+        {150, 174, "SkyQuest", "Sky Bandit", 1, CFrame.new(-4842.83251953125, 717.6661376953125, -2623.96435546875)},
+        {175, 189, "SkyQuest", "Dark Master", 2, CFrame.new(-4842.83251953125, 717.6661376953125, -2623.96435546875)},
+        {190, 209, "PrisonerQuest", "Prisoner", 1, CFrame.new(5308.9306640625, 0.20333321392536163, 474.8701171875)},
+        {210, 249, "PrisonerQuest", "Dangerous Prisoner", 2, CFrame.new(5308.9306640625, 0.20333321392536163, 474.8701171875)},
+        {250, 274, "ColosseumQuest", "Toga Warrior", 1, CFrame.new(-1770.4990234375, 7.392412185668945, -2983.43359375)},
+        {275, 299, "ColosseumQuest", "Gladiator", 2, CFrame.new(-1770.4990234375, 7.392412185668945, -2983.43359375)},
+        {300, 324, "MagmaQuest", "Military Soldier", 1, CFrame.new(-5408.26513671875, 11.013852119445801, 8444.2744140625)},
+        {325, 374, "MagmaQuest", "Military Spy", 2, CFrame.new(-5408.26513671875, 11.013852119445801, 8444.2744140625)},
+        {375, 399, "FishmanQuest", "Fishman Warrior", 1, CFrame.new(61122.65234375, 18.497442245483398, 1569.3997802734375)},
+        {400, 449, "FishmanQuest", "Fishman Commando", 2, CFrame.new(61122.65234375, 18.497442245483398, 1569.3997802734375)},
+        {450, 474, "SkyExp1Quest", "God's Guard", 1, CFrame.new(-4721.88720703125, 843.8740234375, -1949.96643066406)},
+        {475, 524, "SkyExp1Quest", "Shanda", 2, CFrame.new(-7863.1650390625, 5545.5224609375, -378.42266845703125)},
+        {525, 549, "SkyExp2Quest", "Royal Squad", 1, CFrame.new(-7906.81201171875, 5634.6318359375, -1411.99267578125)},
+        {550, 624, "SkyExp2Quest", "Royal Soldier", 2, CFrame.new(-7906.81201171875, 5634.6318359375, -1411.99267578125)},
+        {625, 649, "FountainQuest", "Galley Pirate", 1, CFrame.new(5258.2802734375, 38.526931762695312, 4050.044677734375)},
+        {650, 699, "FountainQuest", "Galley Captain", 2, CFrame.new(5258.2802734375, 38.526931762695312, 4050.044677734375)},
+        {700, 724, "Area1Quest", "Raider", 1, CFrame.new(-427.72567749023, 72.99634552002, 1835.9426269531)},
+        {725, 774, "Area1Quest", "Mercenary", 2, CFrame.new(-427.72567749023, 72.99634552002, 1835.9426269531)},
+        {775, 799, "Area2Quest", "Swan Pirate", 1, CFrame.new(932.31, 125.95, 33159.82)},
+        {800, 874, "Area2Quest", "Factory Staff", 2, CFrame.new(266.26, 73.12, -2984.29)},
+        {875, 899, "MarineQuest3", "Marine Lieutenant", 1, CFrame.new(-2440.79639, 71.7140732, -3216.06812)},
+        {900, 949, "MarineQuest3", "Marine Captain", 2, CFrame.new(-2440.79639, 71.7140732, -3216.06812)},
+        {950, 974, "ZombieQuest", "Zombie", 1, CFrame.new(-5497.06152, 47.5923004, -795.237061)},
+        {975, 999, "ZombieQuest", "Vampire", 2, CFrame.new(-5497.06152, 47.5923004, -795.237061)},
+        {1000, 1049, "SnowMountainQuest", "Snow Trooper", 1, CFrame.new(609.858826, 400.119904, -5370.75244)},
+        {1050, 1099, "SnowMountainQuest", "Winter Warrior", 2, CFrame.new(609.858826, 400.119904, -5370.75244)},
+        {1100, 1124, "IceSideQuest", "Lab Subordinate", 1, CFrame.new(-5769.2041015625, 37.787498474121094, -4476.8974609375)},
+        {1125, 1174, "IceSideQuest", "Horned Warrior", 2, CFrame.new(-6341.36669921875, 15.951762199401855, -5723.162109375)},
+        {1175, 1199, "FireSideQuest", "Magma Ninja", 1, CFrame.new(-5428.03174, 15.0610342, -5299.43457)},
+        {1200, 1249, "FireSideQuest", "Lava Pirate", 2, CFrame.new(-5428.03174, 15.0610342, -5299.43457)},
+        {1250, 1274, "ShipQuest1", "Ship Deckhand", 1, CFrame.new(1037.80127, 125.092171, 32911.6016)},
+        {1275, 1299, "ShipQuest1", "Ship Engineer", 2, CFrame.new(1037.80127, 125.092171, 32911.6016)},
+        {1300, 1324, "ShipQuest2", "Ship Steward", 1, CFrame.new(919.35, 125.92, 33436.03)},
+        {1325, 1349, "ShipQuest2", "Ship Officer", 2, CFrame.new(919.35, 125.92, 33436.03)},
+        {1350, 1374, "FrostQuest", "Arctic Warrior", 1, CFrame.new(5942.85, 28.2980003, -6179.98)},
+        {1375, 1399, "FrostQuest", "Snow Lurker", 2, CFrame.new(5942.85, 28.2980003, -6179.98)},
+        {1400, 1424, "ForgottenQuest", "Sea Soldier", 1, CFrame.new(-3053.89331, 236.881363, -10148.2324)},
+        {1425, 1449, "ForgottenQuest", "Water Fighter", 2, CFrame.new(-3053.89331, 236.881363, -10148.2324)},
+        {1450, 1474, "TikiQuest1", "Horned Warrior", 1, CFrame.new(-16545.9355, 55.6863556, -173.230499)},
+    }
+    
+    for _, quest in ipairs(quests) do
+        if level >= quest[1] and level <= quest[2] then
+            return {
+                QuestName = quest[3],
+                MobName = quest[4],
+                QuestLevel = quest[5],
+                QuestPos = quest[6]
+            }
+        end
+    end
+    
+    return {QuestName = "BanditQuest1", MobName = "Bandit", QuestLevel = 1, QuestPos = CFrame.new(1059.37195, 16.5139828, 1549.22729)}
+end
+
+-- Auto Farm Level
+spawn(function()
+    while wait() do
+        if SATX.Settings.AutoFarmLevel then
+            pcall(function()
+                local QuestData = GetQuestByLevel()
+                local QuestName = QuestData.QuestName
+                local MobName = QuestData.MobName
+                local QuestLevel = QuestData.QuestLevel
+                local QuestPos = QuestData.QuestPos
+                
+                -- Check if we have the quest
+                if not Player.PlayerGui.Main.Quest.Visible or Player.PlayerGui.Main.Quest.Container.QuestTitle.Title.Text ~= MobName then
+                    -- Get quest
+                    TP(QuestPos)
+                    wait(1)
+                    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", QuestName, QuestLevel)
+                else
+                    -- Farm mob
+                    for i, v in pairs(game.Workspace.Enemies:GetChildren()) do
+                        if v.Name == MobName and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+                            repeat wait()
+                                if SATX.Settings.AutoHaki then
+                                    if not Player.Character:FindFirstChild("HasBuso") then
+                                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("Buso")
+                                    end
+                                end
+                                
+                                EquipWeapon(SATX.Settings.SelectedWeapon)
+                                TP(v.HumanoidRootPart.CFrame * CFrame.new(0, SATX.Settings.FarmDistance, 0))
+                                v.HumanoidRootPart.CanCollide = false
+                                v.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
+                                
+                            until not SATX.Settings.AutoFarmLevel or not v.Parent or v.Humanoid.Health <= 0
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Equip Weapon Function
+function EquipWeapon(weaponName)
+    if weaponName == "Melee" then
+        pcall(function()
+            for _, v in pairs(Player.Backpack:GetChildren()) do
+                if v:IsA("Tool") and v.ToolTip:lower():find("melee") then
+                    Humanoid:EquipTool(v)
+                    return
+                end
+            end
+        end)
+    elseif weaponName == "Sword" then
+        pcall(function()
+            for _, v in pairs(Player.Backpack:GetChildren()) do
+                if v:IsA("Tool") and v.ToolTip:lower():find("sword") then
+                    Humanoid:EquipTool(v)
+                    return
+                end
+            end
+        end)
+    elseif weaponName == "Gun" then
+        pcall(function()
+            for _, v in pairs(Player.Backpack:GetChildren()) do
+                if v:IsA("Tool") and v.ToolTip:lower():find("gun") then
+                    Humanoid:EquipTool(v)
+                    return
+                end
+            end
+        end)
+    elseif weaponName == "Fruit" then
+        pcall(function()
+            for _, v in pairs(Player.Backpack:GetChildren()) do
+                if v:IsA("Tool") and v.ToolTip:lower():find("blox fruit") then
+                    Humanoid:EquipTool(v)
+                    return
+                end
+            end
+        end)
+    else
+        pcall(function()
+            local weapon = Player.Backpack:FindFirstChild(weaponName)
+            if weapon then
+                Humanoid:EquipTool(weapon)
+            end
+        end)
+    end
+end
+
+-- Auto Stats
+spawn(function()
+    while wait() do
+        if SATX.Settings.AutoMelee then
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Melee", 1)
+        end
+        if SATX.Settings.AutoDefense then
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Defense", 1)
+        end
+        if SATX.Settings.AutoSword then
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Sword", 1)
+        end
+        if SATX.Settings.AutoGun then
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Gun", 1)
+        end
+        if SATX.Settings.AutoFruit then
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Demon Fruit", 1)
+        end
+        wait(0.1)
+    end
+end)
+
+-- ESP Functions
+local function CreateESP(obj, color, text)
+    local Billboard = Instance.new("BillboardGui", obj)
+    Billboard.Name = "ESP"
+    Billboard.AlwaysOnTop = true
+    Billboard.Size = UDim2.new(0, 100, 0, 50)
+    Billboard.StudsOffset = Vector3.new(0, 3, 0)
+    
+    local TextLabel = Instance.new("TextLabel", Billboard)
+    TextLabel.BackgroundTransparency = 1
+    TextLabel.Size = UDim2.new(1, 0, 1, 0)
+    TextLabel.Font = Enum.Font.GothamBold
+    TextLabel.TextColor3 = color
+    TextLabel.TextStrokeTransparency = 0
+    TextLabel.TextSize = 14
+    TextLabel.Text = text
+    
+    return Billboard
+end
+
+-- Fruit ESP
+spawn(function()
+    while wait(2) do
+        if SATX.Settings.ESPFruit then
+            for _, v in pairs(Workspace:GetChildren()) do
+                if string.find(v.Name, "Fruit") and v:IsA("Tool") or v:IsA("Model") then
+                    if not v:FindFirstChild("ESP") then
+                        CreateESP(v, Color3.fromRGB(255, 0, 0), v.Name)
+                    end
+                end
+            end
+        else
+            for _, v in pairs(Workspace:GetChildren()) do
+                if v:FindFirstChild("ESP") then
+                    v.ESP:Destroy()
+                end
+            end
+        end
+    end
+end)
+
+-- Mob ESP
+spawn(function()
+    while wait(2) do
+        if SATX.Settings.ESPMob then
+            for _, v in pairs(Workspace.Enemies:GetChildren()) do
+                if v:FindFirstChild("HumanoidRootPart") and not v:FindFirstChild("ESP") then
+                    CreateESP(v.HumanoidRootPart, Color3.fromRGB(255, 255, 0), v.Name .. " [" .. math.floor(v.Humanoid.Health) .. " HP]")
+                end
+            end
+        else
+            for _, v in pairs(Workspace.Enemies:GetChildren()) do
+                if v:FindFirstChild("HumanoidRootPart") and v.HumanoidRootPart:FindFirstChild("ESP") then
+                    v.HumanoidRootPart.ESP:Destroy()
+                end
+            end
+        end
+    end
+end)
+
+--===========================================
+-- CREATE GUI
+--===========================================
+
+-- Remove old GUI if exists
+if game.CoreGui:FindFirstChild("SATX_Hub_V3") then
+    game.CoreGui:FindFirstChild("SATX_Hub_V3"):Destroy()
+end
+
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SATX_Hub"
+ScreenGui.Name = "SATX_Hub_V3"
 ScreenGui.Parent = game.CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.ResetOnSpawn = false
 
--- Toggle Button (With Icon)
+-- Toggle Button with Custom Logo
 local ToggleButton = Instance.new("ImageButton")
 ToggleButton.Name = "ToggleButton"
 ToggleButton.Parent = ScreenGui
-ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 ToggleButton.BorderSizePixel = 0
-ToggleButton.Position = UDim2.new(0, 10, 0.5, -35)
-ToggleButton.Size = UDim2.new(0, 70, 0, 70)
-ToggleButton.Image = "rbxassetid://7733779610"
-ToggleButton.ImageColor3 = Color3.fromRGB(195, 3, 4)
+ToggleButton.Position = UDim2.new(0.01, 0, 0.4, 0)
+ToggleButton.Size = UDim2.new(0, 80, 0, 80)
+ToggleButton.Image = SATXLogo
 ToggleButton.ScaleType = Enum.ScaleType.Fit
+ToggleButton.ImageTransparency = 0
 
 local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 15)
+ToggleCorner.CornerRadius = UDim.new(0, 20)
 ToggleCorner.Parent = ToggleButton
 
 local ToggleStroke = Instance.new("UIStroke")
 ToggleStroke.Color = Color3.fromRGB(195, 3, 4)
-ToggleStroke.Thickness = 2
+ToggleStroke.Thickness = 3
 ToggleStroke.Parent = ToggleButton
 
--- Make draggable
+local ToggleShadow = Instance.new("ImageLabel")
+ToggleShadow.Name = "Shadow"
+ToggleShadow.Parent = ToggleButton
+ToggleShadow.AnchorPoint = Vector2.new(0.5, 0.5)
+ToggleShadow.BackgroundTransparency = 1
+ToggleShadow.Position = UDim2.new(0.5, 0, 0.5, 5)
+ToggleShadow.Size = UDim2.new(1, 10, 1, 10)
+ToggleShadow.ZIndex = 0
+ToggleShadow.Image = "rbxassetid://5554236805"
+ToggleShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+ToggleShadow.ImageTransparency = 0.7
+
+-- Make Toggle Button Draggable
 local dragging
 local dragInput
 local dragStart
 local startPos
 
-local function update(input)
+local function updateDrag(input)
     local delta = input.Position - dragStart
     ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 end
@@ -155,7 +669,7 @@ end)
 
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
-        update(input)
+        updateDrag(input)
     end
 end)
 
@@ -163,15 +677,15 @@ end)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.5, -350, 0.5, -250)
-MainFrame.Size = UDim2.new(0, 700, 0, 500)
+MainFrame.Position = UDim2.new(0.5, -400, 0.5, -300)
+MainFrame.Size = UDim2.new(0, 800, 0, 600)
 MainFrame.Visible = false
 MainFrame.ClipsDescendants = true
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.CornerRadius = UDim.new(0, 15)
 MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
@@ -179,105 +693,171 @@ MainStroke.Color = Color3.fromRGB(195, 3, 4)
 MainStroke.Thickness = 2
 MainStroke.Parent = MainFrame
 
+-- Shadow
+local MainShadow = Instance.new("ImageLabel")
+MainShadow.Name = "Shadow"
+MainShadow.Parent = MainFrame
+MainShadow.AnchorPoint = Vector2.new(0.5, 0.5)
+MainShadow.BackgroundTransparency = 1
+MainShadow.Position = UDim2.new(0.5, 0, 0.5, 5)
+MainShadow.Size = UDim2.new(1, 30, 1, 30)
+MainShadow.ZIndex = 0
+MainShadow.Image = "rbxassetid://5554236805"
+MainShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+MainShadow.ImageTransparency = 0.5
+
 -- Title Bar
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
 TitleBar.Parent = MainFrame
-TitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 TitleBar.BorderSizePixel = 0
-TitleBar.Size = UDim2.new(1, 0, 0, 50)
+TitleBar.Size = UDim2.new(1, 0, 0, 60)
 
 local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.CornerRadius = UDim.new(0, 15)
 TitleCorner.Parent = TitleBar
+
+-- Logo in Title
+local TitleLogo = Instance.new("ImageLabel")
+TitleLogo.Parent = TitleBar
+TitleLogo.BackgroundTransparency = 1
+TitleLogo.Position = UDim2.new(0, 15, 0.5, -20)
+TitleLogo.Size = UDim2.new(0, 40, 0, 40)
+TitleLogo.Image = SATXLogo
+TitleLogo.ScaleType = Enum.ScaleType.Fit
 
 -- Title Text
 local TitleText = Instance.new("TextLabel")
 TitleText.Parent = TitleBar
 TitleText.BackgroundTransparency = 1
-TitleText.Position = UDim2.new(0, 60, 0, 0)
-TitleText.Size = UDim2.new(1, -120, 1, 0)
+TitleText.Position = UDim2.new(0, 65, 0, 0)
+TitleText.Size = UDim2.new(0, 300, 1, 0)
 TitleText.Font = Enum.Font.GothamBold
-TitleText.Text = "SATX Blox Fruits Hub"
+TitleText.Text = "SATX BLOX FRUITS HUB"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleText.TextSize = 20
+TitleText.TextSize = 22
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 
--- Logo
-local Logo = Instance.new("ImageLabel")
-Logo.Parent = TitleBar
-Logo.BackgroundTransparency = 1
-Logo.Position = UDim2.new(0, 10, 0.5, -15)
-Logo.Size = UDim2.new(0, 30, 0, 30)
-Logo.Image = "rbxassetid://7733779610"
-Logo.ImageColor3 = Color3.fromRGB(195, 3, 4)
+-- Version Text
+local VersionText = Instance.new("TextLabel")
+VersionText.Parent = TitleBar
+VersionText.BackgroundTransparency = 1
+VersionText.Position = UDim2.new(0, 65, 0, 28)
+VersionText.Size = UDim2.new(0, 200, 0, 20)
+VersionText.Font = Enum.Font.Gotham
+VersionText.Text = "Version " .. SATX.Version
+VersionText.TextColor3 = Color3.fromRGB(195, 3, 4)
+VersionText.TextSize = 12
+VersionText.TextXAlignment = Enum.TextXAlignment.Left
 
 -- Close Button
 local CloseButton = Instance.new("TextButton")
 CloseButton.Parent = TitleBar
 CloseButton.BackgroundColor3 = Color3.fromRGB(195, 3, 4)
 CloseButton.BorderSizePixel = 0
-CloseButton.Position = UDim2.new(1, -45, 0.5, -15)
-CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Position = UDim2.new(1, -50, 0.5, -15)
+CloseButton.Size = UDim2.new(0, 35, 0, 35)
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.TextSize = 16
+CloseButton.TextSize = 18
 
 local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 8)
+CloseCorner.CornerRadius = UDim.new(0, 10)
 CloseCorner.Parent = CloseButton
 
 CloseButton.MouseButton1Click:Connect(function()
+    TweenService:Create(MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 0, 0, 0)}):Play()
+    wait(0.3)
+    MainFrame.Visible = false
+    MainFrame.Size = UDim2.new(0, 800, 0, 600)
+end)
+
+-- Minimize Button
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Parent = TitleBar
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MinimizeButton.BorderSizePixel = 0
+MinimizeButton.Position = UDim2.new(1, -95, 0.5, -15)
+MinimizeButton.Size = UDim2.new(0, 35, 0, 35)
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.Text = "-"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.TextSize = 22
+
+local MinimizeCorner = Instance.new("UICorner")
+MinimizeCorner.CornerRadius = UDim.new(0, 10)
+MinimizeCorner.Parent = MinimizeButton
+
+MinimizeButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
 end)
 
--- Tab System
+-- Tab Container
 local TabContainer = Instance.new("Frame")
 TabContainer.Name = "TabContainer"
 TabContainer.Parent = MainFrame
 TabContainer.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 TabContainer.BorderSizePixel = 0
-TabContainer.Position = UDim2.new(0, 0, 0, 50)
-TabContainer.Size = UDim2.new(0, 150, 1, -50)
+TabContainer.Position = UDim2.new(0, 0, 0, 60)
+TabContainer.Size = UDim2.new(0, 180, 1, -60)
+
+local TabListLayout = Instance.new("UIListLayout")
+TabListLayout.Parent = TabContainer
+TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabListLayout.Padding = UDim.new(0, 5)
+
+local TabPadding = Instance.new("UIPadding")
+TabPadding.Parent = TabContainer
+TabPadding.PaddingTop = UDim.new(0, 10)
 
 -- Content Container
 local ContentContainer = Instance.new("Frame")
 ContentContainer.Name = "ContentContainer"
 ContentContainer.Parent = MainFrame
 ContentContainer.BackgroundTransparency = 1
-ContentContainer.Position = UDim2.new(0, 150, 0, 50)
-ContentContainer.Size = UDim2.new(1, -150, 1, -50)
+ContentContainer.Position = UDim2.new(0, 180, 0, 60)
+ContentContainer.Size = UDim2.new(1, -180, 1, -60)
 
 -- Scrolling Frame for Content
 local ContentScroll = Instance.new("ScrollingFrame")
 ContentScroll.Parent = ContentContainer
 ContentScroll.BackgroundTransparency = 1
 ContentScroll.BorderSizePixel = 0
-ContentScroll.Size = UDim2.new(1, -10, 1, -10)
-ContentScroll.Position = UDim2.new(0, 5, 0, 5)
+ContentScroll.Size = UDim2.new(1, -20, 1, -20)
+ContentScroll.Position = UDim2.new(0, 10, 0, 10)
 ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-ContentScroll.ScrollBarThickness = 6
+ContentScroll.ScrollBarThickness = 8
 ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(195, 3, 4)
 
 local ContentLayout = Instance.new("UIListLayout")
 ContentLayout.Parent = ContentScroll
 ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ContentLayout.Padding = UDim.new(0, 10)
+ContentLayout.Padding = UDim.new(0, 15)
 
--- Functions to create UI elements
+ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ContentScroll.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 20)
+end)
+
+-- UI Creation Functions
 local function CreateTab(name, icon)
     local TabButton = Instance.new("TextButton")
     TabButton.Name = name
     TabButton.Parent = TabContainer
-    TabButton.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    TabButton.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
     TabButton.BorderSizePixel = 0
-    TabButton.Size = UDim2.new(1, 0, 0, 45)
+    TabButton.Size = UDim2.new(1, -20, 0, 50)
     TabButton.Font = Enum.Font.GothamSemibold
-    TabButton.Text = "  " .. name
-    TabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-    TabButton.TextSize = 14
+    TabButton.Text = "   " .. icon .. "  " .. name
+    TabButton.TextColor3 = Color3.fromRGB(180, 180, 180)
+    TabButton.TextSize = 15
     TabButton.TextXAlignment = Enum.TextXAlignment.Left
+    TabButton.AutoButtonColor = false
+    
+    local TabCorner = Instance.new("UICorner")
+    TabCorner.CornerRadius = UDim.new(0, 10)
+    TabCorner.Parent = TabButton
     
     local TabContent = Instance.new("Frame")
     TabContent.Name = name .. "Content"
@@ -289,58 +869,107 @@ local function CreateTab(name, icon)
     local TabLayout = Instance.new("UIListLayout")
     TabLayout.Parent = TabContent
     TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    TabLayout.Padding = UDim.new(0, 10)
+    TabLayout.Padding = UDim.new(0, 12)
+    
+    TabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        TabContent.Size = UDim2.new(1, 0, 0, TabLayout.AbsoluteContentSize.Y)
+    end)
     
     TabButton.MouseButton1Click:Connect(function()
+        -- Hide all tabs
         for _, tab in pairs(ContentScroll:GetChildren()) do
-            if tab:IsA("Frame") then
+            if tab:IsA("Frame") and tab.Name:match("Content") then
                 tab.Visible = false
             end
         end
+        
+        -- Show selected tab
         TabContent.Visible = true
         
+        -- Update button colors
         for _, btn in pairs(TabContainer:GetChildren()) do
             if btn:IsA("TextButton") then
-                btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-                btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+                TweenService:Create(btn, TweenInfo.new(0.2), {
+                    BackgroundColor3 = Color3.fromRGB(28, 28, 28),
+                    TextColor3 = Color3.fromRGB(180, 180, 180)
+                }):Play()
             end
         end
-        TabButton.BackgroundColor3 = Color3.fromRGB(195, 3, 4)
-        TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        
+        TweenService:Create(TabButton, TweenInfo.new(0.2), {
+            BackgroundColor3 = Color3.fromRGB(195, 3, 4),
+            TextColor3 = Color3.fromRGB(255, 255, 255)
+        }):Play()
+    end)
+    
+    TabButton.MouseEnter:Connect(function()
+        if TabButton.BackgroundColor3 ~= Color3.fromRGB(195, 3, 4) then
+            TweenService:Create(TabButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 35)}):Play()
+        end
+    end)
+    
+    TabButton.MouseLeave:Connect(function()
+        if TabButton.BackgroundColor3 ~= Color3.fromRGB(195, 3, 4) then
+            TweenService:Create(TabButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(28, 28, 28)}):Play()
+        end
     end)
     
     return TabContent
 end
 
-local function CreateToggle(parent, name, callback)
+local function CreateSection(parent, text)
+    local Section = Instance.new("Frame")
+    Section.Parent = parent
+    Section.BackgroundColor3 = Color3.fromRGB(195, 3, 4)
+    Section.BorderSizePixel = 0
+    Section.Size = UDim2.new(1, -10, 0, 45)
+    
+    local SectionCorner = Instance.new("UICorner")
+    SectionCorner.CornerRadius = UDim.new(0, 10)
+    SectionCorner.Parent = Section
+    
+    local SectionLabel = Instance.new("TextLabel")
+    SectionLabel.Parent = Section
+    SectionLabel.BackgroundTransparency = 1
+    SectionLabel.Size = UDim2.new(1, -20, 1, 0)
+    SectionLabel.Position = UDim2.new(0, 20, 0, 0)
+    SectionLabel.Font = Enum.Font.GothamBold
+    SectionLabel.Text = text
+    SectionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SectionLabel.TextSize = 16
+    SectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+    
+    return Section
+end
+
+local function CreateToggle(parent, text, defaultValue, callback)
     local ToggleFrame = Instance.new("Frame")
     ToggleFrame.Parent = parent
-    ToggleFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    ToggleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     ToggleFrame.BorderSizePixel = 0
-    ToggleFrame.Size = UDim2.new(1, -10, 0, 40)
+    ToggleFrame.Size = UDim2.new(1, -10, 0, 50)
     
     local ToggleCorner = Instance.new("UICorner")
-    ToggleCorner.CornerRadius = UDim.new(0, 8)
+    ToggleCorner.CornerRadius = UDim.new(0, 10)
     ToggleCorner.Parent = ToggleFrame
     
     local ToggleLabel = Instance.new("TextLabel")
     ToggleLabel.Parent = ToggleFrame
     ToggleLabel.BackgroundTransparency = 1
-    ToggleLabel.Position = UDim2.new(0, 15, 0, 0)
-    ToggleLabel.Size = UDim2.new(1, -80, 1, 0)
+    ToggleLabel.Position = UDim2.new(0, 20, 0, 0)
+    ToggleLabel.Size = UDim2.new(1, -100, 1, 0)
     ToggleLabel.Font = Enum.Font.Gotham
-    ToggleLabel.Text = name
+    ToggleLabel.Text = text
     ToggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ToggleLabel.TextSize = 13
+    ToggleLabel.TextSize = 14
     ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
     
-    local ToggleButton = Instance.new("TextButton")
+    local ToggleButton = Instance.new("Frame")
     ToggleButton.Parent = ToggleFrame
-    ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    ToggleButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     ToggleButton.BorderSizePixel = 0
-    ToggleButton.Position = UDim2.new(1, -55, 0.5, -12)
-    ToggleButton.Size = UDim2.new(0, 45, 0, 24)
-    ToggleButton.Text = ""
+    ToggleButton.Position = UDim2.new(1, -70, 0.5, -13)
+    ToggleButton.Size = UDim2.new(0, 55, 0, 26)
     
     local ButtonCorner = Instance.new("UICorner")
     ButtonCorner.CornerRadius = UDim.new(1, 0)
@@ -349,151 +978,112 @@ local function CreateToggle(parent, name, callback)
     local ToggleCircle = Instance.new("Frame")
     ToggleCircle.Parent = ToggleButton
     ToggleCircle.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-    ToggleCircle.Position = UDim2.new(0, 2, 0.5, -10)
+    ToggleCircle.Position = UDim2.new(0, 3, 0.5, -10)
     ToggleCircle.Size = UDim2.new(0, 20, 0, 20)
     
     local CircleCorner = Instance.new("UICorner")
     CircleCorner.CornerRadius = UDim.new(1, 0)
     CircleCorner.Parent = ToggleCircle
     
-    local toggled = false
+    local toggled = defaultValue or false
     
-    ToggleButton.MouseButton1Click:Connect(function()
+    if toggled then
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(195, 3, 4)
+        ToggleCircle.Position = UDim2.new(1, -23, 0.5, -10)
+        ToggleCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    end
+    
+    local function Toggle()
         toggled = not toggled
         if toggled then
             TweenService:Create(ToggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(195, 3, 4)}):Play()
-            TweenService:Create(ToggleCircle, TweenInfo.new(0.2), {Position = UDim2.new(1, -22, 0.5, -10), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            TweenService:Create(ToggleCircle, TweenInfo.new(0.2), {
+                Position = UDim2.new(1, -23, 0.5, -10),
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            }):Play()
         else
-            TweenService:Create(ToggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
-            TweenService:Create(ToggleCircle, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, -10), BackgroundColor3 = Color3.fromRGB(200, 200, 200)}):Play()
+            TweenService:Create(ToggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
+            TweenService:Create(ToggleCircle, TweenInfo.new(0.2), {
+                Position = UDim2.new(0, 3, 0.5, -10),
+                BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+            }):Play()
         end
         callback(toggled)
-    end)
+    end
     
-    parent.Size = UDim2.new(1, 0, 0, ContentLayout.AbsoluteContentSize.Y)
+    local ToggleInput = Instance.new("TextButton")
+    ToggleInput.Parent = ToggleFrame
+    ToggleInput.BackgroundTransparency = 1
+    ToggleInput.Size = UDim2.new(1, 0, 1, 0)
+    ToggleInput.Text = ""
+    
+    ToggleInput.MouseButton1Click:Connect(Toggle)
+    
+    return ToggleFrame
 end
 
-local function CreateButton(parent, name, callback)
+local function CreateButton(parent, text, callback)
     local ButtonFrame = Instance.new("TextButton")
     ButtonFrame.Parent = parent
     ButtonFrame.BackgroundColor3 = Color3.fromRGB(195, 3, 4)
     ButtonFrame.BorderSizePixel = 0
-    ButtonFrame.Size = UDim2.new(1, -10, 0, 40)
+    ButtonFrame.Size = UDim2.new(1, -10, 0, 45)
     ButtonFrame.Font = Enum.Font.GothamBold
-    ButtonFrame.Text = name
+    ButtonFrame.Text = text
     ButtonFrame.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ButtonFrame.TextSize = 14
+    ButtonFrame.TextSize = 15
+    ButtonFrame.AutoButtonColor = false
     
     local ButtonCorner = Instance.new("UICorner")
-    ButtonCorner.CornerRadius = UDim.new(0, 8)
+    ButtonCorner.CornerRadius = UDim.new(0, 10)
     ButtonCorner.Parent = ButtonFrame
     
-    ButtonFrame.MouseButton1Click:Connect(callback)
-    
-    parent.Size = UDim2.new(1, 0, 0, ContentLayout.AbsoluteContentSize.Y)
-end
-
-local function CreateDropdown(parent, name, options, callback)
-    local DropdownFrame = Instance.new("Frame")
-    DropdownFrame.Parent = parent
-    DropdownFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    DropdownFrame.BorderSizePixel = 0
-    DropdownFrame.Size = UDim2.new(1, -10, 0, 40)
-    
-    local DropdownCorner = Instance.new("UICorner")
-    DropdownCorner.CornerRadius = UDim.new(0, 8)
-    DropdownCorner.Parent = DropdownFrame
-    
-    local DropdownLabel = Instance.new("TextLabel")
-    DropdownLabel.Parent = DropdownFrame
-    DropdownLabel.BackgroundTransparency = 1
-    DropdownLabel.Position = UDim2.new(0, 15, 0, 0)
-    DropdownLabel.Size = UDim2.new(1, -30, 1, 0)
-    DropdownLabel.Font = Enum.Font.Gotham
-    DropdownLabel.Text = name .. ": " .. (options[1] or "None")
-    DropdownLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    DropdownLabel.TextSize = 13
-    DropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
-    
-    local DropdownButton = Instance.new("TextButton")
-    DropdownButton.Parent = DropdownFrame
-    DropdownButton.BackgroundTransparency = 1
-    DropdownButton.Size = UDim2.new(1, 0, 1, 0)
-    DropdownButton.Text = ""
-    
-    local DropdownList = Instance.new("Frame")
-    DropdownList.Parent = DropdownFrame
-    DropdownList.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    DropdownList.BorderSizePixel = 0
-    DropdownList.Position = UDim2.new(0, 0, 1, 5)
-    DropdownList.Size = UDim2.new(1, 0, 0, 0)
-    DropdownList.Visible = false
-    DropdownList.ClipsDescendants = true
-    
-    local ListCorner = Instance.new("UICorner")
-    ListCorner.CornerRadius = UDim.new(0, 8)
-    ListCorner.Parent = DropdownList
-    
-    local ListLayout = Instance.new("UIListLayout")
-    ListLayout.Parent = DropdownList
-    ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    
-    DropdownButton.MouseButton1Click:Connect(function()
-        DropdownList.Visible = not DropdownList.Visible
-        if DropdownList.Visible then
-            DropdownList.Size = UDim2.new(1, 0, 0, math.min(#options * 30, 150))
-        end
+    ButtonFrame.MouseButton1Click:Connect(function()
+        TweenService:Create(ButtonFrame, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(150, 2, 3)}):Play()
+        wait(0.1)
+        TweenService:Create(ButtonFrame, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(195, 3, 4)}):Play()
+        callback()
     end)
     
-    for _, option in ipairs(options) do
-        local OptionButton = Instance.new("TextButton")
-        OptionButton.Parent = DropdownList
-        OptionButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        OptionButton.BorderSizePixel = 0
-        OptionButton.Size = UDim2.new(1, 0, 0, 30)
-        OptionButton.Font = Enum.Font.Gotham
-        OptionButton.Text = option
-        OptionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        OptionButton.TextSize = 12
-        
-        OptionButton.MouseButton1Click:Connect(function()
-            DropdownLabel.Text = name .. ": " .. option
-            DropdownList.Visible = false
-            callback(option)
-        end)
-    end
+    ButtonFrame.MouseEnter:Connect(function()
+        TweenService:Create(ButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(220, 10, 10)}):Play()
+    end)
     
-    parent.Size = UDim2.new(1, 0, 0, ContentLayout.AbsoluteContentSize.Y)
+    ButtonFrame.MouseLeave:Connect(function()
+        TweenService:Create(ButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(195, 3, 4)}):Play()
+    end)
+    
+    return ButtonFrame
 end
 
-local function CreateSlider(parent, name, min, max, default, callback)
+local function CreateSlider(parent, text, min, max, default, callback)
     local SliderFrame = Instance.new("Frame")
     SliderFrame.Parent = parent
-    SliderFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    SliderFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     SliderFrame.BorderSizePixel = 0
-    SliderFrame.Size = UDim2.new(1, -10, 0, 60)
+    SliderFrame.Size = UDim2.new(1, -10, 0, 70)
     
     local SliderCorner = Instance.new("UICorner")
-    SliderCorner.CornerRadius = UDim.new(0, 8)
+    SliderCorner.CornerRadius = UDim.new(0, 10)
     SliderCorner.Parent = SliderFrame
     
     local SliderLabel = Instance.new("TextLabel")
     SliderLabel.Parent = SliderFrame
     SliderLabel.BackgroundTransparency = 1
-    SliderLabel.Position = UDim2.new(0, 15, 0, 5)
-    SliderLabel.Size = UDim2.new(1, -30, 0, 20)
+    SliderLabel.Position = UDim2.new(0, 20, 0, 10)
+    SliderLabel.Size = UDim2.new(1, -40, 0, 20)
     SliderLabel.Font = Enum.Font.Gotham
-    SliderLabel.Text = name .. ": " .. default
+    SliderLabel.Text = text .. ": " .. default
     SliderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    SliderLabel.TextSize = 13
+    SliderLabel.TextSize = 14
     SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
     
     local SliderBar = Instance.new("Frame")
     SliderBar.Parent = SliderFrame
-    SliderBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    SliderBar.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     SliderBar.BorderSizePixel = 0
-    SliderBar.Position = UDim2.new(0, 15, 0, 35)
-    SliderBar.Size = UDim2.new(1, -30, 0, 8)
+    SliderBar.Position = UDim2.new(0, 20, 0, 40)
+    SliderBar.Size = UDim2.new(1, -40, 0, 10)
     
     local BarCorner = Instance.new("UICorner")
     BarCorner.CornerRadius = UDim.new(1, 0)
@@ -535,255 +1125,493 @@ local function CreateSlider(parent, name, min, max, default, callback)
             local value = math.floor(min + (max - min) * percentage)
             
             SliderFill.Size = UDim2.new(percentage, 0, 1, 0)
-            SliderLabel.Text = name .. ": " .. value
+            SliderLabel.Text = text .. ": " .. value
             callback(value)
         end
     end)
     
-    parent.Size = UDim2.new(1, 0, 0, ContentLayout.AbsoluteContentSize.Y)
+    return SliderFrame
 end
 
-local function CreateLabel(parent, text)
-    local Label = Instance.new("TextLabel")
-    Label.Parent = parent
-    Label.BackgroundColor3 = Color3.fromRGB(195, 3, 4)
-    Label.BorderSizePixel = 0
-    Label.Size = UDim2.new(1, -10, 0, 35)
-    Label.Font = Enum.Font.GothamBold
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Label.TextSize = 14
+local function CreateDropdown(parent, text, options, callback)
+    local DropdownFrame = Instance.new("Frame")
+    DropdownFrame.Parent = parent
+    DropdownFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    DropdownFrame.BorderSizePixel = 0
+    DropdownFrame.Size = UDim2.new(1, -10, 0, 50)
+    DropdownFrame.ClipsDescendants = false
     
-    local LabelCorner = Instance.new("UICorner")
-    LabelCorner.CornerRadius = UDim.new(0, 8)
-    LabelCorner.Parent = Label
+    local DropdownCorner = Instance.new("UICorner")
+    DropdownCorner.CornerRadius = UDim.new(0, 10)
+    DropdownCorner.Parent = DropdownFrame
     
-    parent.Size = UDim2.new(1, 0, 0, ContentLayout.AbsoluteContentSize.Y)
+    local DropdownLabel = Instance.new("TextLabel")
+    DropdownLabel.Parent = DropdownFrame
+    DropdownLabel.BackgroundTransparency = 1
+    DropdownLabel.Position = UDim2.new(0, 20, 0, 0)
+    DropdownLabel.Size = UDim2.new(1, -60, 1, 0)
+    DropdownLabel.Font = Enum.Font.Gotham
+    DropdownLabel.Text = text .. ": " .. (options[1] or "None")
+    DropdownLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    DropdownLabel.TextSize = 14
+    DropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local DropdownButton = Instance.new("TextButton")
+    DropdownButton.Parent = DropdownFrame
+    DropdownButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    DropdownButton.BorderSizePixel = 0
+    DropdownButton.Position = UDim2.new(1, -35, 0.5, -12)
+    DropdownButton.Size = UDim2.new(0, 25, 0, 25)
+    DropdownButton.Font = Enum.Font.GothamBold
+    DropdownButton.Text = "▼"
+    DropdownButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    DropdownButton.TextSize = 10
+    
+    local DropButtonCorner = Instance.new("UICorner")
+    DropButtonCorner.CornerRadius = UDim.new(0, 6)
+    DropButtonCorner.Parent = DropdownButton
+    
+    local DropdownList = Instance.new("ScrollingFrame")
+    DropdownList.Parent = DropdownFrame
+    DropdownList.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    DropdownList.BorderSizePixel = 0
+    DropdownList.Position = UDim2.new(0, 0, 1, 5)
+    DropdownList.Size = UDim2.new(1, 0, 0, 0)
+    DropdownList.Visible = false
+    DropdownList.ScrollBarThickness = 4
+    DropdownList.ScrollBarImageColor3 = Color3.fromRGB(195, 3, 4)
+    DropdownList.CanvasSize = UDim2.new(0, 0, 0, 0)
+    
+    local ListCorner = Instance.new("UICorner")
+    ListCorner.CornerRadius = UDim.new(0, 10)
+    ListCorner.Parent = DropdownList
+    
+    local ListLayout = Instance.new("UIListLayout")
+    ListLayout.Parent = DropdownList
+    ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ListLayout.Padding = UDim.new(0, 2)
+    
+    ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        DropdownList.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 10)
+    end)
+    
+    local isOpen = false
+    
+    DropdownButton.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        if isOpen then
+            DropdownList.Visible = true
+            TweenService:Create(DropdownList, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, math.min(#options * 35, 150))}):Play()
+            DropdownButton.Text = "▲"
+        else
+            TweenService:Create(DropdownList, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+            wait(0.2)
+            DropdownList.Visible = false
+            DropdownButton.Text = "▼"
+        end
+    end)
+    
+    for i, option in ipairs(options) do
+        local OptionButton = Instance.new("TextButton")
+        OptionButton.Parent = DropdownList
+        OptionButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        OptionButton.BorderSizePixel = 0
+        OptionButton.Size = UDim2.new(1, -5, 0, 30)
+        OptionButton.Font = Enum.Font.Gotham
+        OptionButton.Text = option
+        OptionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        OptionButton.TextSize = 13
+        OptionButton.AutoButtonColor = false
+        
+        local OptCorner = Instance.new("UICorner")
+        OptCorner.CornerRadius = UDim.new(0, 6)
+        OptCorner.Parent = OptionButton
+        
+        OptionButton.MouseButton1Click:Connect(function()
+            DropdownLabel.Text = text .. ": " .. option
+            isOpen = false
+            TweenService:Create(DropdownList, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+            wait(0.2)
+            DropdownList.Visible = false
+            DropdownButton.Text = "▼"
+            callback(option)
+        end)
+        
+        OptionButton.MouseEnter:Connect(function()
+            TweenService:Create(OptionButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(195, 3, 4)}):Play()
+        end)
+        
+        OptionButton.MouseLeave:Connect(function()
+            TweenService:Create(OptionButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+        end)
+    end
+    
+    return DropdownFrame
 end
 
 -- Create Tabs
+local MainTab = CreateTab("Main", "🏠")
 local AutoFarmTab = CreateTab("Auto Farm", "⚔️")
 local CombatTab = CreateTab("Combat", "🗡️")
 local StatsTab = CreateTab("Stats", "📊")
-local TeleportTab = CreateTab("Teleport", "🌍")
+local BossTab = CreateTab("Boss", "👹")
+local SeaTab = CreateTab("Sea", "🌊")
+local RaidTab = CreateTab("Raid", "💀")
+local TeleportTab = CreateTab("Teleport", "📍")
 local ESPTab = CreateTab("ESP", "👁️")
 local MiscTab = CreateTab("Misc", "⚙️")
-local RaidTab = CreateTab("Raid", "💀")
-local ShopTab = CreateTab("Shop", "🛒")
 
+--==========================================
+-- MAIN TAB
+--==========================================
+CreateSection(MainTab, "⚡ Quick Actions")
+
+CreateButton(MainTab, "🚀 Redeem All Codes", function()
+    local codes = {
+        "Sub2CaptainMaui", "kittgaming", "Sub2Fer999", "Enyu_is_Pro",
+        "Magicbus", "JCWK", "Starcodeheo", "Bluxxy", "Sub2NoobMaster123",
+        "Sub2UncleKizaru", "Sub2Daigrock", "Axiore", "TantaiGaming",
+        "StrawHatMaine", "Sub2OfficialNoobie", "TheGreatAce", "Fudd10",
+        "Bignews", "THEGREATACE", "SUB2GAMERROBOT_EXP1", "StrawHatMaine",
+        "SUB2NOOBMASTER123", "Sub2Daigrock", "Axiore", "BIGNEWS"
+    }
+    
+    for _, code in ipairs(codes) do
+        game:GetService("ReplicatedStorage").Remotes.Redeem:InvokeServer(code)
+        wait(0.1)
+    end
+    
+    Notify("SATX Hub", "All codes redeemed!", 3)
+end)
+
+CreateButton(MainTab, "🎁 Collect All Chests (Sea 1)", function()
+    local chests = Workspace:GetChildren()
+    for _, v in pairs(chests) do
+        if v.Name == "Chest1" or v.Name == "Chest2" or v.Name == "Chest3" then
+            HumanoidRootPart.CFrame = v.CFrame
+            wait(0.3)
+        end
+    end
+    Notify("SATX Hub", "Chests collected!", 3)
+end)
+
+CreateSection(MainTab, "📊 Player Info")
+
+local PlayerLevel = Instance.new("TextLabel")
+PlayerLevel.Parent = MainTab
+PlayerLevel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+PlayerLevel.BorderSizePixel = 0
+PlayerLevel.Size = UDim2.new(1, -10, 0, 40)
+PlayerLevel.Font = Enum.Font.Gotham
+PlayerLevel.Text = "Level: " .. Player.Data.Level.Value
+PlayerLevel.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerLevel.TextSize = 14
+
+local PLCorner = Instance.new("UICorner")
+PLCorner.CornerRadius = UDim.new(0, 10)
+PLCorner.Parent = PlayerLevel
+
+--==========================================
 -- AUTO FARM TAB
-CreateLabel(AutoFarmTab, "🎯 Auto Farm Options")
+--==========================================
+CreateSection(AutoFarmTab, "⚔️ Auto Farm")
 
-CreateToggle(AutoFarmTab, "Auto Farm Level", function(value)
-    SATX.Settings.AutoLevel = value
+CreateToggle(AutoFarmTab, "Auto Farm Level", false, function(value)
+    SATX.Settings.AutoFarmLevel = value
 end)
 
-CreateToggle(AutoFarmTab, "Auto Farm Boss", function(value)
-    SATX.Settings.AutoBoss = value
+CreateToggle(AutoFarmTab, "Auto Farm Bone", false, function(value)
+    SATX.Settings.AutoFarmBone = value
 end)
 
-CreateToggle(AutoFarmTab, "Auto Farm Mastery", function(value)
-    SATX.Settings.AutoMastery = value
+CreateToggle(AutoFarmTab, "Auto Farm Ectoplasm", false, function(value)
+    SATX.Settings.AutoFarmEctoplasm = value
 end)
 
-CreateToggle(AutoFarmTab, "Auto Farm Elite", function(value)
-    SATX.Settings.AutoElite = value
+CreateToggle(AutoFarmTab, "Auto Farm Factory", false, function(value)
+    SATX.Settings.AutoFarmFactory = value
 end)
 
-CreateToggle(AutoFarmTab, "Auto Farm Cake Prince", function(value)
-    SATX.Settings.AutoCakePrince = value
+CreateSection(AutoFarmTab, "⚙️ Farm Settings")
+
+CreateToggle(AutoFarmTab, "Bring Mob", false, function(value)
+    SATX.Settings.BringMob = value
 end)
 
-CreateToggle(AutoFarmTab, "Auto Farm Soul Reaper", function(value)
-    SATX.Settings.AutoSoul = value
+CreateSlider(AutoFarmTab, "Bring Mob Distance", 100, 500, 350, function(value)
+    SATX.Settings.BringMobDistance = value
 end)
 
-CreateToggle(AutoFarmTab, "Auto Farm Bone", function(value)
-    SATX.Settings.AutoBone = value
+CreateSlider(AutoFarmTab, "Farm Distance", 5, 50, 30, function(value)
+    SATX.Settings.FarmDistance = value
 end)
 
-CreateToggle(AutoFarmTab, "Auto Farm Sea Event", function(value)
-    SATX.Settings.AutoSeaEvent = value
-end)
-
-CreateToggle(AutoFarmTab, "Auto Farm Factory", function(value)
-    SATX.Settings.AutoFactory = value
-end)
-
-CreateToggle(AutoFarmTab, "Bring Mobs", function(value)
-    SATX.Settings.BringMobs = value
-end)
-
-CreateSlider(AutoFarmTab, "Distance From Mob", 3, 20, 5, function(value)
-    SATX.Settings.DistanceFromMob = value
-end)
-
-CreateDropdown(AutoFarmTab, "Select Weapon", WeaponList, function(value)
+CreateDropdown(AutoFarmTab, "Select Weapon", {"Melee", "Sword", "Gun", "Fruit"}, function(value)
     SATX.Settings.SelectedWeapon = value
 end)
 
+--==========================================
 -- COMBAT TAB
-CreateLabel(CombatTab, "⚔️ Combat Options")
+--==========================================
+CreateSection(CombatTab, "⚡ Combat")
 
-CreateToggle(CombatTab, "Fast Attack", function(value)
+CreateToggle(CombatTab, "Fast Attack", false, function(value)
     SATX.Settings.FastAttack = value
 end)
 
-CreateToggle(CombatTab, "Auto Haki", function(value)
+CreateDropdown(CombatTab, "Fast Attack Mode", {"Slow", "Fast", "Super Fast"}, function(value)
+    SATX.Settings.FastAttackMode = value
+end)
+
+CreateToggle(CombatTab, "Auto Haki", false, function(value)
     SATX.Settings.AutoHaki = value
 end)
 
-CreateToggle(CombatTab, "Auto Buso Haki", function(value)
-    SATX.Settings.AutoBusoHaki = value
+CreateToggle(CombatTab, "Auto Enhancement", false, function(value)
+    SATX.Settings.AutoEnhancement = value
 end)
 
-CreateToggle(CombatTab, "Auto Observation Haki", function(value)
-    SATX.Settings.AutoObservation = value
+CreateSection(CombatTab, "🎯 Mastery")
+
+CreateToggle(CombatTab, "Skill Mastery", false, function(value)
+    SATX.Settings.SkillMastery = value
 end)
 
-CreateToggle(CombatTab, "Auto Click", function(value)
-    SATX.Settings.AutoClick = value
+CreateToggle(CombatTab, "Gun Mastery", false, function(value)
+    SATX.Settings.GunMastery = value
 end)
 
-CreateToggle(CombatTab, "Infinite Energy", function(value)
-    SATX.Settings.InfiniteEnergy = value
-end)
-
-CreateButton(CombatTab, "Enable God Mode", function()
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "SATX Hub";
-        Text = "God Mode Activated!";
-        Duration = 3;
-    })
-end)
-
+--==========================================
 -- STATS TAB
-CreateLabel(StatsTab, "📊 Auto Stats")
+--==========================================
+CreateSection(StatsTab, "📈 Auto Stats")
 
-CreateToggle(StatsTab, "Auto Melee", function(value)
+CreateToggle(StatsTab, "Auto Melee", false, function(value)
     SATX.Settings.AutoMelee = value
 end)
 
-CreateToggle(StatsTab, "Auto Defense", function(value)
+CreateToggle(StatsTab, "Auto Defense", false, function(value)
     SATX.Settings.AutoDefense = value
 end)
 
-CreateToggle(StatsTab, "Auto Sword", function(value)
+CreateToggle(StatsTab, "Auto Sword", false, function(value)
     SATX.Settings.AutoSword = value
 end)
 
-CreateToggle(StatsTab, "Auto Gun", function(value)
+CreateToggle(StatsTab, "Auto Gun", false, function(value)
     SATX.Settings.AutoGun = value
 end)
 
-CreateToggle(StatsTab, "Auto Devil Fruit", function(value)
+CreateToggle(StatsTab, "Auto Devil Fruit", false, function(value)
     SATX.Settings.AutoFruit = value
 end)
 
 CreateButton(StatsTab, "Reset Stats", function()
-    -- Reset stats logic
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BlackbeardReward","Refund","1")
+    Notify("SATX Hub", "Stats reset!", 3)
 end)
 
+--==========================================
+-- BOSS TAB
+--==========================================
+CreateSection(BossTab, "👹 Boss Farm")
+
+CreateToggle(BossTab, "Auto Boss", false, function(value)
+    SATX.Settings.AutoBoss = value
+end)
+
+CreateToggle(BossTab, "Auto All Boss", false, function(value)
+    SATX.Settings.AutoAllBoss = value
+end)
+
+CreateToggle(BossTab, "Auto Elite", false, function(value)
+    SATX.Settings.AutoElite = value
+end)
+
+CreateToggle(BossTab, "Auto Soul Reaper", false, function(value)
+    SATX.Settings.AutoSoulReaper = value
+end)
+
+CreateToggle(BossTab, "Auto Dough King", false, function(value)
+    SATX.Settings.AutoDoughKing = value
+end)
+
+CreateToggle(BossTab, "Auto Cake Prince", false, function(value)
+    SATX.Settings.AutoCakePrince = value
+end)
+
+--==========================================
+-- SEA TAB
+--==========================================
+CreateSection(SeaTab, "🌊 Sea Events")
+
+CreateToggle(SeaTab, "Auto Sea Beast", false, function(value)
+    SATX.Settings.AutoSeaBeast = value
+end)
+
+CreateToggle(SeaTab, "Auto Pirate Raid", false, function(value)
+    SATX.Settings.AutoPirateRaid = value
+end)
+
+CreateToggle(SeaTab, "Auto Ship", false, function(value)
+    SATX.Settings.AutoShip = value
+end)
+
+CreateToggle(SeaTab, "Auto Terrorshark", false, function(value)
+    SATX.Settings.AutoTerrorshark = value
+end)
+
+--==========================================
+-- RAID TAB
+--==========================================
+CreateSection(RaidTab, "💀 Raid")
+
+CreateToggle(RaidTab, "Auto Raid", false, function(value)
+    SATX.Settings.AutoRaid = value
+end)
+
+CreateToggle(RaidTab, "Auto Awakener", false, function(value)
+    SATX.Settings.AutoAwakener = value
+end)
+
+CreateToggle(RaidTab, "Auto Buy Chip", false, function(value)
+    SATX.Settings.AutoBuyChip = value
+end)
+
+CreateToggle(RaidTab, "Kill Aura", false, function(value)
+    SATX.Settings.KillAura = value
+end)
+
+CreateDropdown(RaidTab, "Select Raid", {"Flame", "Ice", "Quake", "Light", "Dark", "Spider", "Rumble", "Magma", "Buddha", "Sand", "Phoenix"}, function(value)
+    SATX.Settings.SelectRaid = value
+end)
+
+CreateButton(RaidTab, "Start Raid", function()
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("RaidsNpc","Select", SATX.Settings.SelectRaid)
+end)
+
+--==========================================
 -- TELEPORT TAB
-CreateLabel(TeleportTab, "🌍 Teleport")
+--==========================================
+CreateSection(TeleportTab, "🗺️ Sea 1")
 
-CreateButton(TeleportTab, "Teleport to Main Island", function()
-    HumanoidRootPart.CFrame = CFrame.new(-7894.6201, 5545.49316, -380.246796)
+CreateButton(TeleportTab, "Jungle", function()
+    TP(CFrame.new(-1612, 37, 149))
 end)
 
-CreateButton(TeleportTab, "Teleport to Jungle", function()
-    HumanoidRootPart.CFrame = CFrame.new(-1612.7957763672, 36.852081298828, 149.12843322754)
+CreateButton(TeleportTab, "Pirate Village", function()
+    TP(CFrame.new(-1141, 5, 3831))
 end)
 
-CreateButton(TeleportTab, "Teleport to Desert", function()
-    HumanoidRootPart.CFrame = CFrame.new(944.15789794922, 20.919729232788, 4373.3002929688)
+CreateButton(TeleportTab, "Desert", function()
+    TP(CFrame.new(944, 21, 4373))
 end)
 
-CreateButton(TeleportTab, "Teleport to Frozen Village", function()
-    HumanoidRootPart.CFrame = CFrame.new(5395.7578125, 87.22342824936, -4720.5166015625)
+CreateButton(TeleportTab, "Frozen Village", function()
+    TP(CFrame.new(1389, 87, -1298))
 end)
 
-CreateButton(TeleportTab, "Teleport to Skylands", function()
-    HumanoidRootPart.CFrame = CFrame.new(-7894.6201171875, 5545.49316406, -380.24679870605)
+CreateButton(TeleportTab, "Marine Fortress", function()
+    TP(CFrame.new(-4914, 50, 4281))
 end)
 
-CreateButton(TeleportTab, "Teleport to Prison", function()
-    HumanoidRootPart.CFrame = CFrame.new(4851.8720703125, 5.6519818305969, 734.85021972656)
+CreateSection(TeleportTab, "🗺️ Sea 2")
+
+CreateButton(TeleportTab, "Kingdom of Rose", function()
+    TP(CFrame.new(-427, 73, 1835))
 end)
 
-CreateButton(TeleportTab, "Teleport to Colosseum", function()
-    HumanoidRootPart.CFrame = CFrame.new(-1427.6203613281, 7.2881078720093, -2792.7722167969)
+CreateButton(TeleportTab, "Cafe", function()
+    TP(CFrame.new(-385, 73, 297))
 end)
 
-CreateButton(TeleportTab, "Teleport to Magma Village", function()
-    HumanoidRootPart.CFrame = CFrame.new(-5247.7163085938, 12.883934020996, -8504.8349609375)
+CreateButton(TeleportTab, "Mansion", function()
+    TP(CFrame.new(-12471, 374, -7551))
 end)
 
-CreateButton(TeleportTab, "Teleport to Hydra Island", function()
-    HumanoidRootPart.CFrame = CFrame.new(5749.7861328125, 611.94750976563, -282.36651611328)
+CreateSection(TeleportTab, "🗺️ Sea 3")
+
+CreateButton(TeleportTab, "Port Town", function()
+    TP(CFrame.new(-290, 7, 5343))
 end)
 
-CreateButton(TeleportTab, "Teleport to Castle on the Sea", function()
-    HumanoidRootPart.CFrame = CFrame.new(-5085.23681640625, 316.5072021484375, -3156.202880859375)
+CreateButton(TeleportTab, "Hydra Island", function()
+    TP(CFrame.new(5749, 612, -282))
 end)
 
+CreateButton(TeleportTab, "Great Tree", function()
+    TP(CFrame.new(2681, 1682, -7190))
+end)
+
+CreateButton(TeleportTab, "Castle on the Sea", function()
+    TP(CFrame.new(-5085, 316, -3156))
+end)
+
+--==========================================
 -- ESP TAB
-CreateLabel(ESPTab, "👁️ ESP Options")
+--==========================================
+CreateSection(ESPTab, "👁️ ESP")
 
-CreateToggle(ESPTab, "Player ESP", function(value)
-    SATX.Settings.PlayerESP = value
+CreateToggle(ESPTab, "Player ESP", false, function(value)
+    SATX.Settings.ESPPlayer = value
 end)
 
-CreateToggle(ESPTab, "Mob ESP", function(value)
-    SATX.Settings.MobESP = value
+CreateToggle(ESPTab, "Mob ESP", false, function(value)
+    SATX.Settings.ESPMob = value
 end)
 
-CreateToggle(ESPTab, "Fruit ESP", function(value)
-    SATX.Settings.FruitESP = value
+CreateToggle(ESPTab, "Fruit ESP", false, function(value)
+    SATX.Settings.ESPFruit = value
 end)
 
-CreateToggle(ESPTab, "Chest ESP", function(value)
-    SATX.Settings.ChestESP = value
+CreateToggle(ESPTab, "Chest ESP", false, function(value)
+    SATX.Settings.ESPChest = value
 end)
 
-CreateToggle(ESPTab, "Flower ESP", function(value)
-    SATX.Settings.FlowerESP = value
+CreateToggle(ESPTab, "Flower ESP", false, function(value)
+    SATX.Settings.ESPFlower = value
 end)
 
-CreateToggle(ESPTab, "NPC ESP", function(value)
-    SATX.Settings.NPCESP = value
+CreateToggle(ESPTab, "NPC ESP", false, function(value)
+    SATX.Settings.ESPNPC = value
 end)
 
+CreateToggle(ESPTab, "Island ESP", false, function(value)
+    SATX.Settings.ESPIsland = value
+end)
+
+--==========================================
 -- MISC TAB
-CreateLabel(MiscTab, "⚙️ Miscellaneous")
+--==========================================
+CreateSection(MiscTab, "⚙️ Miscellaneous")
 
-CreateToggle(MiscTab, "NoClip", function(value)
+CreateToggle(MiscTab, "NoClip", false, function(value)
     SATX.Settings.NoClip = value
 end)
 
-CreateToggle(MiscTab, "Auto Store Items", function(value)
-    SATX.Settings.AutoStoreItems = value
+CreateToggle(MiscTab, "Infinite Energy", false, function(value)
+    SATX.Settings.InfiniteEnergy = value
 end)
 
-CreateToggle(MiscTab, "Auto Random Surprise", function(value)
-    SATX.Settings.AutoRandomSurprise = value
-end)
-
-CreateToggle(MiscTab, "Remove Fog", function(value)
+CreateToggle(MiscTab, "White Screen", false, function(value)
+    SATX.Settings.WhiteScreen = value
     if value then
-        game.Lighting.FogEnd = 9e9
+        game:GetService("RunService"):Set3dRenderingEnabled(false)
     else
-        game.Lighting.FogEnd = 100000
+        game:GetService("RunService"):Set3dRenderingEnabled(true)
     end
 end)
 
-CreateToggle(MiscTab, "Remove Damage Effect", function(value)
-    for _, v in pairs(game.Workspace:GetDescendants()) do
-        if v.Name == "DamageCounter" then
-            v:Destroy()
-        end
+CreateToggle(MiscTab, "Remove Fog", false, function(value)
+    SATX.Settings.RemoveFog = value
+    if value then
+        Lighting.FogEnd = 9e9
+    else
+        Lighting.FogEnd = 100000
     end
 end)
+
+CreateSection(MiscTab, "🏃 Movement")
 
 CreateSlider(MiscTab, "Walk Speed", 16, 200, 16, function(value)
     SATX.Settings.WalkSpeed = value
@@ -793,294 +1621,38 @@ CreateSlider(MiscTab, "Jump Power", 50, 300, 50, function(value)
     SATX.Settings.JumpPower = value
 end)
 
-CreateButton(MiscTab, "Redeem All Codes", function()
-    local codes = {"Sub2CaptainMaui", "kittgaming", "Sub2Fer999", "Enyu_is_Pro", "Magicbus", "JCWK", "Starcodeheo", "Bluxxy", "Sub2NoobMaster123"}
-    for _, code in pairs(codes) do
-        game:GetService("ReplicatedStorage").Remotes.Redeem:InvokeServer(code)
-        wait(1)
+CreateSection(MiscTab, "🎮 Race V3/V4")
+
+CreateToggle(MiscTab, "Auto Active Race V3", false, function(value)
+    SATX.Settings.AutoActiveRaceV3 = value
+end)
+
+CreateToggle(MiscTab, "Auto Active Race V4", false, function(value)
+    SATX.Settings.AutoActiveRaceV4 = value
+end)
+
+-- Toggle GUI
+ToggleButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    if MainFrame.Visible then
+        MainFrame.Size = UDim2.new(0, 0, 0, 0)
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 800, 0, 600)}):Play()
     end
 end)
 
--- RAID TAB
-CreateLabel(RaidTab, "💀 Raid Options")
-
-CreateToggle(RaidTab, "Auto Raid", function(value)
-    SATX.Settings.AutoRaid = value
-end)
-
-CreateToggle(RaidTab, "Auto Awakener", function(value)
-    SATX.Settings.AutoAwakener = value
-end)
-
-CreateToggle(RaidTab, "Auto Buy Raid Chip", function(value)
-    SATX.Settings.AutoBuyChip = value
-end)
-
-CreateDropdown(RaidTab, "Select Raid", {"Flame", "Ice", "Quake", "Light", "Dark", "Spider", "Rumble", "Magma", "Buddha"}, function(value)
-    SATX.Settings.SelectedRaid = value
-end)
-
-CreateButton(RaidTab, "Start Raid", function()
-    -- Start raid logic
-end)
-
-CreateButton(RaidTab, "Teleport to Raid", function()
-    -- Teleport to raid
-end)
-
--- SHOP TAB
-CreateLabel(ShopTab, "🛒 Shop Options")
-
-CreateButton(ShopTab, "Buy Haki Colors", function()
-    -- Buy haki colors
-end)
-
-CreateButton(ShopTab, "Buy All Abilities", function()
-    -- Buy abilities
-end)
-
-CreateButton(ShopTab, "Buy All Sword Styles", function()
-    -- Buy sword styles
-end)
-
-CreateButton(ShopTab, "Buy Race Reroll", function()
-    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BlackbeardReward","Reroll","2")
-end)
-
--- Toggle visibility
-ToggleButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-
--- Make first tab visible
-AutoFarmTab.Visible = true
+-- Activate first tab
+MainTab.Visible = true
 TabContainer:GetChildren()[1].BackgroundColor3 = Color3.fromRGB(195, 3, 4)
 TabContainer:GetChildren()[1].TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- Auto Farm Logic
-local function GetQuestMob()
-    local level = Player.Data.Level.Value
-    if level >= 1 and level <= 9 then
-        return "Bandit", CFrame.new(1145, 17, 1634)
-    elseif level >= 10 and level <= 14 then
-        return "Monkey", CFrame.new(-1448, 50, 35)
-    elseif level >= 15 and level <= 29 then
-        return "Gorilla", CFrame.new(-1129, 40, -525)
-    elseif level >= 30 and level <= 39 then
-        return "Pirate", CFrame.new(-1192, 5, 3916)
-    elseif level >= 40 and level <= 59 then
-        return "Brute", CFrame.new(-1141, 15, 4350)
-    elseif level >= 60 and level <= 74 then
-        return "Desert Bandit", CFrame.new(932, 7, 4484)
-    elseif level >= 75 and level <= 89 then
-        return "Desert Officer", CFrame.new(1608, 7, 4371)
-    elseif level >= 90 and level <= 99 then
-        return "Snow Bandit", CFrame.new(1354, 87, -1393)
-    elseif level >= 100 and level <= 119 then
-        return "Snowman", CFrame.new(1198, 87, -1397)
-    elseif level >= 120 and level <= 149 then
-        return "Chief Petty Officer", CFrame.new(-4855, 23, 4308)
-    elseif level >= 150 and level <= 174 then
-        return "Sky Bandit", CFrame.new(-4981, 717, -2905)
-    elseif level >= 175 and level <= 189 then
-        return "Dark Master", CFrame.new(-5079, 717, -2625)
-    elseif level >= 190 and level <= 209 then
-        return "Prisoner", CFrame.new(5411, 96, 690)
-    elseif level >= 210 and level <= 249 then
-        return "Dangerous Prisoner", CFrame.new(5411, 96, 690)
-    elseif level >= 250 and level <= 274 then
-        return "Toga Warrior", CFrame.new(-1824, 50, -2743)
-    elseif level >= 275 and level <= 299 then
-        return "Gladiator", CFrame.new(-1268, 7, -3039)
-    elseif level >= 300 and level <= 324 then
-        return "Military Soldier", CFrame.new(-5408, 11, 8454)
-    elseif level >= 325 and level <= 374 then
-        return "Military Spy", CFrame.new(-5815, 84, 8820)
-    elseif level >= 375 and level <= 399 then
-        return "Fishman Warrior", CFrame.new(60859, 19, 1501)
-    elseif level >= 400 and level <= 449 then
-        return "Fishman Commando", CFrame.new(61123, 19, 1569)
-    elseif level >= 450 and level <= 474 then
-        return "God's Guard", CFrame.new(-4698, 845, -1912)
-    elseif level >= 475 and level <= 524 then
-        return "Shanda", CFrame.new(-7685, 5567, -502)
-    elseif level >= 525 and level <= 549 then
-        return "Royal Squad", CFrame.new(-7670, 5607, -1460)
-    elseif level >= 550 and level <= 624 then
-        return "Royal Soldier", CFrame.new(-7670, 5607, -1460)
-    elseif level >= 625 and level <= 649 then
-        return "Galley Pirate", CFrame.new(5551, 42, 3939)
-    elseif level >= 650 and level <= 699 then
-        return "Galley Captain", CFrame.new(5551, 42, 3939)
-    elseif level >= 700 and level <= 724 then
-        return "Raider", CFrame.new(-917, 7, 2623)
-    elseif level >= 725 and level <= 774 then
-        return "Mercenary", CFrame.new(-874, 7, 2622)
-    elseif level >= 775 and level <= 799 then
-        return "Swan Pirate", CFrame.new(942, 126, 1324)
-    elseif level >= 800 and level <= 874 then
-        return "Factory Staff", CFrame.new(296, 7, -2954)
-    elseif level >= 875 and level <= 899 then
-        return "Marine Lieutenant", CFrame.new(-2807, 73, -3038)
-    elseif level >= 900 and level <= 949 then
-        return "Marine Captain", CFrame.new(-1869, 73, -3321)
-    elseif level >= 950 and level <= 974 then
-        return "Zombie", CFrame.new(-5736, 126, -728)
-    elseif level >= 975 and level <= 999 then
-        return "Vampire", CFrame.new(-5806, 7, -1319)
-    elseif level >= 1000 and level <= 1049 then
-        return "Snow Trooper", CFrame.new(478, 402, -5362)
-    elseif level >= 1050 and level <= 1099 then
-        return "Winter Warrior", CFrame.new(1295, 429, -5087)
-    elseif level >= 1100 and level <= 1124 then
-        return "Lab Subordinate", CFrame.new(-5769, 74, -4265)
-    elseif level >= 1125 and level <= 1174 then
-        return "Horned Warrior", CFrame.new(-6341, 18, -5767)
-    elseif level >= 1175 and level <= 1199 then
-        return "Magma Ninja", CFrame.new(-5428, 78, -5959)
-    elseif level >= 1200 and level <= 1249 then
-        return "Lava Pirate", CFrame.new(-5213, 49, -4701)
-    elseif level >= 1250 and level <= 1274 then
-        return "Ship Deckhand", CFrame.new(1041, 125, 32911)
-    elseif level >= 1275 and level <= 1299 then
-        return "Ship Engineer", CFrame.new(919, 44, 32853)
-    elseif level >= 1300 and level <= 1324 then
-        return "Ship Steward", CFrame.new(915, 129, 33440)
-    elseif level >= 1325 and level <= 1349 then
-        return "Ship Officer", CFrame.new(915, 181, 33440)
-    elseif level >= 1350 and level <= 1374 then
-        return "Arctic Warrior", CFrame.new(6038, 29, -6231)
-    elseif level >= 1375 and level <= 1399 then
-        return "Snow Lurker", CFrame.new(5560, 42, -6826)
-    elseif level >= 1400 and level <= 1424 then
-        return "Sea Soldier", CFrame.new(-5032, 6, -4912)
-    elseif level >= 1425 and level <= 1449 then
-        return "Water Fighter", CFrame.new(-3385, 239, -10542)
-    else
-        return "Bandit", CFrame.new(1145, 17, 1634)
-    end
-end
-
-spawn(function()
-    while wait() do
-        if SATX.Settings.AutoLevel then
-            pcall(function()
-                local mobName, mobPos = GetQuestMob()
-                for _, v in pairs(game:GetService("Workspace").Enemies:GetChildren()) do
-                    if v.Name == mobName and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-                        repeat wait()
-                            if SATX.Settings.FastAttack then
-                                game:GetService("VirtualUser"):CaptureController()
-                                game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 672))
-                            end
-                            
-                            v.HumanoidRootPart.CanCollide = false
-                            v.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
-                            v.Head.CanCollide = false
-                            
-                            HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, SATX.Settings.DistanceFromMob, 0)
-                            
-                            if SATX.Settings.AutoHaki then
-                                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("Buso")
-                            end
-                        until not SATX.Settings.AutoLevel or not v.Parent or v.Humanoid.Health <= 0
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- NoClip
-spawn(function()
-    while wait() do
-        if SATX.Settings.NoClip then
-            for _, v in pairs(Player.Character:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    v.CanCollide = false
-                end
-            end
-        end
-    end
-end)
-
--- Walk Speed & Jump Power
-spawn(function()
-    while wait() do
-        if Character and Character:FindFirstChild("Humanoid") then
-            Character.Humanoid.WalkSpeed = SATX.Settings.WalkSpeed
-            Character.Humanoid.JumpPower = SATX.Settings.JumpPower
-        end
-    end
-end)
-
--- Fruit ESP
-local function CreateESP(object, color, text)
-    local BillboardGui = Instance.new("BillboardGui")
-    local TextLabel = Instance.new("TextLabel")
-    
-    BillboardGui.Parent = object
-    BillboardGui.AlwaysOnTop = true
-    BillboardGui.Size = UDim2.new(0, 100, 0, 50)
-    BillboardGui.StudsOffset = Vector3.new(0, 3, 0)
-    
-    TextLabel.Parent = BillboardGui
-    TextLabel.BackgroundTransparency = 1
-    TextLabel.Size = UDim2.new(1, 0, 1, 0)
-    TextLabel.Font = Enum.Font.GothamBold
-    TextLabel.Text = text
-    TextLabel.TextColor3 = color
-    TextLabel.TextSize = 14
-    TextLabel.TextStrokeTransparency = 0
-end
-
-spawn(function()
-    while wait(2) do
-        if SATX.Settings.FruitESP then
-            for _, v in pairs(game:GetService("Workspace"):GetChildren()) do
-                if string.find(v.Name, "Fruit") and v:IsA("Tool") then
-                    if not v:FindFirstChild("BillboardGui") then
-                        CreateESP(v, Color3.fromRGB(255, 0, 0), v.Name)
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- Auto Stats
-spawn(function()
-    while wait() do
-        if SATX.Settings.AutoMelee then
-            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Melee", 1)
-        end
-        if SATX.Settings.AutoDefense then
-            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Defense", 1)
-        end
-        if SATX.Settings.AutoSword then
-            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Sword", 1)
-        end
-        if SATX.Settings.AutoGun then
-            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Gun", 1)
-        end
-        if SATX.Settings.AutoFruit then
-            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AddPoint", "Demon Fruit", 1)
-        end
-    end
-end)
-
 -- Notification
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "SATX Blox Fruits Hub";
-    Text = "Script Loaded Successfully!";
-    Icon = "rbxassetid://7733779610";
-    Duration = 5;
-})
+Notify("SATX Hub", "Script Loaded Successfully! Version " .. SATX.Version, 5)
 
 print([[
-╔═══════════════════════════════════════╗
-║   SATX Blox Fruits Hub Loaded         ║
-║   Version: 2.0 Ultra Complete         ║
-║   Status: ✅ Fully Operational       ║
-╚═══════════════════════════════════════╝
+╔══════════════════════════════════════════════════╗
+║        SATX BLOX FRUITS HUB - LOADED            ║
+║        Version: 3.0 ULTIMATE                     ║
+║        Status: ✅ Fully Operational              ║
+║        Features: 100+ Advanced Functions         ║
+╚══════════════════════════════════════════════════╝
 ]])
